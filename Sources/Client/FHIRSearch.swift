@@ -38,9 +38,15 @@ open class FHIRSearch
 	
 	/// The sorting to request, in FHIR-format ("family,-birthdate").
 	open var sort: String?
-	
-	/// The number of results to return per page; leave nil to let the server decide.
-	open var pageCount: Int?
+    
+    /// The request options that will be passed to the request handler
+    open var requestOptions: FHIRRequestOption?
+    
+    /// Whether the header includes Cache-Control no-cache
+    open var noCache: Bool = false
+    
+    /// The number of results to return per page; leave nil to let the server decide.
+    open var pageCount: Int?
 	
 	/// The URL to retrieve the next page of results from; nil if there are no more results.
 	var nextPageURL: URL?
@@ -137,7 +143,15 @@ open class FHIRSearch
 			callback(nil, nil)
 			return
 		}
-		guard let handler = server.handlerForRequest(withMethod: .GET, resource: nil) else {
+        var handlerOpt = server.handlerForRequest(withMethod: .GET, resource: nil)
+        handlerOpt?.options = requestOptions ?? []
+        if noCache {
+            var headers = FHIRRequestHeaders()
+            headers.customHeaders = ["Cache-Control":"no-cache"]
+            handlerOpt?.add(headers: headers)
+        }
+        
+		guard let handler = handlerOpt else {
 			callback(nil, FHIRError.noRequestHandlerAvailable(.GET))
 			return
 		}
